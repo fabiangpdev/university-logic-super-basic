@@ -18,9 +18,8 @@ DB disponible en `localhost:5432`
 
 ### 2) Ejecutar la app de escritorio
 ```powershell
-cd test/src/WinFormsAuthApp
-dotnet restore
-dotnet run
+cd test/
+./dist/WinFormsAuthApp.exe
 ```
 
 ### Funcionalidad
