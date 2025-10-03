@@ -1,16 +1,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# Copiar todo el repo
 COPY . .
 
-# Ir al proyecto WinForms
 WORKDIR /src/src/WinFormsAuthApp
 
-# Restaurar y publicar habilitando targeting de Windows desde Linux
 RUN dotnet restore -p:EnableWindowsTargeting=true \
  && dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:EnableWindowsTargeting=true -o /out
-
-# La imagen resultante contiene /out con los binarios publicados
-
 
