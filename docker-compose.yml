@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:16
+    container_name: winforms_auth_db
+    environment:
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+      POSTGRES_DB: authdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d authdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app_build:
+    build:
+      context: .
+      dockerfile: Dockerfile.build
+    container_name: winforms_auth_app_build
+    volumes:
+      - ./dist:/dist
+    command: sh -c "rm -rf /dist/* && cp -r /out/* /dist"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+volumes:
+  db_data:
+
+
