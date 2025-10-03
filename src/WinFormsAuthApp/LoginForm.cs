@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using WinFormsAuthApp.Data;
+using WinFormsAuthApp.Config;
 
 namespace WinFormsAuthApp
 {
@@ -10,6 +11,7 @@ namespace WinFormsAuthApp
         private readonly TextBox _txtEmail = new TextBox { Left = 120, Top = 20, Width = 200 };
         private readonly TextBox _txtPassword = new TextBox { Left = 120, Top = 60, Width = 200, PasswordChar = '•' };
         private readonly Button _btnLogin = new Button { Text = "Entrar", Left = 120, Top = 100, Width = 100 };
+        private readonly Button _btnBack = new Button { Text = "Volver", Left = 230, Top = 100, Width = 90 };
 
         public LoginForm()
         {
@@ -22,8 +24,10 @@ namespace WinFormsAuthApp
             Controls.Add(_txtEmail);
             Controls.Add(_txtPassword);
             Controls.Add(_btnLogin);
+            Controls.Add(_btnBack);
 
             _btnLogin.Click += async (s, e) => await OnLoginAsync();
+            _btnBack.Click += (s, e) => Close();
         }
 
         private async Task OnLoginAsync()
@@ -40,9 +44,17 @@ namespace WinFormsAuthApp
             try
             {
                 var repo = new UserRepository();
-                var ok = await repo.ValidateLoginAsync(email, password);
-                MessageBox.Show(ok ? "Login exitoso." : "Credenciales inválidas.");
-                if (ok) Close();
+                var result = await repo.ValidateLoginAsync(email, password);
+                if (!result.ok)
+                {
+                    MessageBox.Show("Credenciales inválidas.");
+                    return;
+                }
+                WinFormsAuthApp.Config.Config.Session.UserId = result.userId;
+                WinFormsAuthApp.Config.Config.Session.UserName = result.name;
+                WinFormsAuthApp.Config.Config.Session.Role = result.role;
+                MessageBox.Show($"Bienvenido {result.name} ({result.role}).");
+                Close();
             }
             catch (Exception ex)
             {
@@ -51,5 +63,6 @@ namespace WinFormsAuthApp
         }
     }
 }
+
 
 

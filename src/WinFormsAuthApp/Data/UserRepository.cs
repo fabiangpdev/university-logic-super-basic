@@ -25,11 +25,11 @@ namespace WinFormsAuthApp.Data
             return result != null;
         }
 
-        public async Task<int> RegisterAsync(string name, string email, string password)
+        public async Task<int> RegisterAsync(string name, string email, string password, string role = "user")
         {
             var hash = PasswordHasher.ComputeSha256(password);
-            const string sql = @"INSERT INTO users(name, email, password_hash)
-                                 VALUES (@name, @email, @hash)
+            const string sql = @"INSERT INTO users(name, email, password_hash, role)
+                                 VALUES (@name, @email, @hash, @role)
                                  RETURNING id;";
             await using var conn = new NpgsqlConnection(_connString);
             await conn.OpenAsync();
@@ -37,20 +37,26 @@ namespace WinFormsAuthApp.Data
             cmd.Parameters.AddWithValue("name", name);
             cmd.Parameters.AddWithValue("email", email);
             cmd.Parameters.AddWithValue("hash", hash);
+            cmd.Parameters.AddWithValue("role", role);
             var idObj = await cmd.ExecuteScalarAsync();
             return idObj is int id ? id : 0;
         }
 
-        public async Task<bool> ValidateLoginAsync(string email, string password)
+        public async Task<(bool ok, int userId, string name, string role)> ValidateLoginAsync(string email, string password)
         {
-            const string sql = "SELECT password_hash FROM users WHERE email = @email LIMIT 1";
+            const string sql = "SELECT id, name, role, password_hash FROM users WHERE email = @email LIMIT 1";
             await using var conn = new NpgsqlConnection(_connString);
             await conn.OpenAsync();
             await using var cmd = new NpgsqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("email", email);
-            var result = await cmd.ExecuteScalarAsync();
-            if (result is not string dbHash) return false;
-            return PasswordHasher.Verify(password, dbHash);
+            await using var reader = await cmd.ExecuteReaderAsync();
+            if (!await reader.ReadAsync()) return (false, 0, string.Empty, "user");
+            var userId = reader.GetInt32(0);
+            var name = reader.GetString(1);
+            var role = reader.GetString(2);
+            var dbHash = reader.GetString(3);
+            var ok = PasswordHasher.Verify(password, dbHash);
+            return ok ? (true, userId, name, role) : (false, 0, string.Empty, "user");
         }
     }
 }
